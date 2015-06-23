@@ -210,16 +210,6 @@ function getDependencies() {
 }
 
 function buildV8() {
-    export CXX=`which clang++`
-    export CC=`which clang`
-    export CPP="`which clang` -E -std=c++11 -stdlib=libc++"
-    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
-    export CXX_host=`which clang++`
-    export CC_host=`which clang`
-    export CPP_host="`which clang` -E"
-    export LINK_host=`which clang++`
-    export GYP_DEFINES="clang=1 mac_deployment_target=10.9"
-    
     pushd v8 > /dev/null || err
 
     if [[ "$PLATFORM" == "x64" ]] ; then
@@ -232,6 +222,16 @@ function buildV8() {
     fi
 
     if [[ "$unixtype" == "mac" ]] ; then
+	export CXX=`which clang++`
+	export CC=`which clang`
+	export CPP="`which clang` -E -std=c++11 -stdlib=libc++"
+	export LINK="`which clang++` -std=c++11 -stdlib=libc++"
+	export CXX_host=`which clang++`
+	export CC_host=`which clang`
+	export CPP_host="`which clang` -E"
+	export LINK_host=`which clang++`
+	export GYP_DEFINES="clang=1 mac_deployment_target=10.9"
+
         v8OutputDir=`pwd`/out/$makecall
         fileext="a"
         DYLD_LIBRARY_PATH=$v8OutputDir $make $makecall $WERRORSTRING || err
@@ -265,14 +265,18 @@ function buildJS1() {
     if [[ "$unixtype" == "mac" ]] ; then
         v8OutputDir=`pwd`/out/$makecall
     else
-        v8OutputDir=`pwd`/out/$makecall/lib.target
+        v8OutputDir=`pwd`/out/$makecall/obj.target
     fi
     popd > /dev/null || err
 
     currentDir=$(pwd -P)
     includeString="-I $currentDir/src/libs/include"
     
-    libsString="$v8OutputDir/libicudata.a $v8OutputDir/libicui18n.a $v8OutputDir/libicuuc.a $v8OutputDir/libv8_base.x64.a $v8OutputDir/libv8_nosnapshot.x64.a $v8OutputDir/libv8_snapshot.a"
+    if [[ "$unixtype" == "mac" ]] ; then
+	libsString="$v8OutputDir/libicudata.a $v8OutputDir/libicui18n.a $v8OutputDir/libicuuc.a $v8OutputDir/libv8_base.x64.a $v8OutputDir/libv8_nosnapshot.x64.a $v8OutputDir/libv8_snapshot.a"
+    else
+	libsString="$v8OutputDir/tools/gyp/libv8_base.x64.a $v8OutputDir/tools/gyp/libv8_nosnapshot.x64.a $v8OutputDir/tools/gyp/libv8_snapshot.a" 
+    fi
     outputDir="$currentDir/src/libs"
 
     pushd $currentDir/src/EventStore.Projections.v8Integration/ > /dev/null || err
@@ -289,7 +293,7 @@ function buildJS1() {
         outputObj=$outputDir/libjs1.so
     fi
 
-    g++ $includeString $libsString *.cpp -o $outputObj $gccArch -O2 -fPIC --shared --save-temps -std=c++0x --stdlib=libc++ || err
+    g++ $includeString $libsString *.cpp -o $outputObj $gccArch -O2 -fPIC --shared --save-temps -std=c++0x || err
 
     if [[ "$unixtype" == "mac" ]] ; then
         pushd $outputDir > /dev/null || err
@@ -419,9 +423,9 @@ else
         buildJS1
         buildEventStore
     else
-        [[ -f src/libs/libv8.so ]] || [[ -f src/libs/libv8.dylib ]] || exitWithError "Cannot find libv8.[so|dylib] - in src/libs/ so cannot do a quick build!"
-        [[ -f src/libs/libicui18n.so ]] || [[ -f src/libs/libicui18n.dylib ]] || exitWithError "Cannot find libicui18n.[so|dylib] - in src/libs/ so cannot do a quick build!"
-        [[ -f src/libs/libjs1.so ]] || [[ -f src/libs/libjs1.dylib ]] || exitWithError "Cannot find libjs1.[so|dylib] - at src/libs/ so cannot do a quick build!"
+        # [[ -f src/libs/libv8.so ]] || [[ -f src/libs/libv8.dylib ]] || exitWithError "Cannot find libv8.[so|dylib] - in src/libs/ so cannot do a quick build!"
+        # [[ -f src/libs/libicui18n.so ]] || [[ -f src/libs/libicui18n.dylib ]] || exitWithError "Cannot find libicui18n.[so|dylib] - in src/libs/ so cannot do a quick build!"
+        # [[ -f src/libs/libjs1.so ]] || [[ -f src/libs/libjs1.dylib ]] || exitWithError "Cannot find libjs1.[so|dylib] - at src/libs/ so cannot do a quick build!"
 
         buildEventStore
     fi

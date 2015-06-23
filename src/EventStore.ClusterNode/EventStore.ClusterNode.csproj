@@ -92,10 +92,6 @@
     <IsMac Condition="('$(OS)' == 'Unix') And (Exists ('/Library/Frameworks'))">true</IsMac>
   </PropertyGroup>
   <Target Name="BeforeBuild">
-    <Copy SourceFiles="..\libs\libjs1.so" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'false'" />
-    <Copy SourceFiles="..\libs\libv8.so" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'false'" />
-    <Copy SourceFiles="..\libs\libicui18n.so" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'false'" />
-    <Copy SourceFiles="..\libs\libicuuc.so" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'false'" />
     <Copy ContinueOnError="WarnAndContinue" SourceFiles="..\libs\libjs1.dylib" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'true'" />
     <Copy ContinueOnError="WarnAndContinue" SourceFiles="..\libs\libv8.dylib" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'true'" />
     <Copy ContinueOnError="WarnAndContinue" SourceFiles="..\libs\libicui18n.dylib" DestinationFolder="$(OutDir)" Condition="'$(OS)' != 'Windows_NT' And '$(IsMac)' == 'true'" />
