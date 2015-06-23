@@ -210,6 +210,16 @@ function getDependencies() {
 }
 
 function buildV8() {
+    export CXX=`which clang++`
+    export CC=`which clang`
+    export CPP="`which clang` -E -std=c++11 -stdlib=libc++"
+    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
+    export CXX_host=`which clang++`
+    export CC_host=`which clang`
+    export CPP_host="`which clang` -E"
+    export LINK_host=`which clang++`
+    export GYP_DEFINES="clang=1 mac_deployment_target=10.9"
+    
     pushd v8 > /dev/null || err
 
     if [[ "$PLATFORM" == "x64" ]] ; then
@@ -223,28 +233,13 @@ function buildV8() {
 
     if [[ "$unixtype" == "mac" ]] ; then
         v8OutputDir=`pwd`/out/$makecall
-        fileext="dylib"
-        DYLD_LIBRARY_PATH=$v8OutputDir $make $makecall $WERRORSTRING library=shared || err
+        fileext="a"
+        DYLD_LIBRARY_PATH=$v8OutputDir $make $makecall $WERRORSTRING || err
     else
         v8OutputDir=`pwd`/out/$makecall/lib.target
         fileext="so"
-        $make $makecall $WERRORSTRING library=shared || err
+        $make $makecall $WERRORSTRING || err
     fi
-
-    pushd ../src/libs > /dev/null
-    cp $v8OutputDir/libv8.$fileext . || err
-    cp $v8OutputDir/libicui18n.$fileext . ||  err
-    cp $v8OutputDir/libicuuc.$fileext . || err
-
-    if [[ "$unixtype" == "mac" ]] ; then
-        install_name_tool -id libv8.dylib libv8.dylib
-        install_name_tool -id libicui18n.dylib libicui18n.dylib
-        install_name_tool -id libicuuc.dylib libicuuc.dylib
-        install_name_tool -change /usr/local/lib/libicuuc.dylib libicuuc.dylib libicui18n.dylib
-        install_name_tool -change /usr/local/lib/libicuuc.dylib libicuuc.dylib libv8.dylib
-        install_name_tool -change /usr/local/lib/libicui18n.dylib libicui18n.dylib libv8.dylib
-    fi
-    popd > /dev/null
 
     [[ -d ../src/libs/include ]] || mkdir ../src/libs/include
 
@@ -256,9 +251,28 @@ function buildV8() {
 }
 
 function buildJS1() {
+    # TODO: pgermishuys - refactor (getV8Path() perhaps)
+    pushd v8 > /dev/null || err
+    if [[ "$PLATFORM" == "x64" ]] ; then
+        makecall="x64.$CONFIGURATION"
+    elif [[ "$PLATFORM" == "x86" ]] ; then
+        makecall="ia32.$CONFIGURATION"
+    else
+        echo "Unsupported platform $PLATFORM."
+        exit 1
+    fi
+
+    if [[ "$unixtype" == "mac" ]] ; then
+        v8OutputDir=`pwd`/out/$makecall
+    else
+        v8OutputDir=`pwd`/out/$makecall/lib.target
+    fi
+    popd > /dev/null || err
+
     currentDir=$(pwd -P)
     includeString="-I $currentDir/src/libs/include"
-    libsString="-L $currentDir/src/libs"
+    
+    libsString="$v8OutputDir/libicudata.a $v8OutputDir/libicui18n.a $v8OutputDir/libicuuc.a $v8OutputDir/libv8_base.x64.a $v8OutputDir/libv8_nosnapshot.x64.a $v8OutputDir/libv8_snapshot.a"
     outputDir="$currentDir/src/libs"
 
     pushd $currentDir/src/EventStore.Projections.v8Integration/ > /dev/null || err
@@ -275,7 +289,7 @@ function buildJS1() {
         outputObj=$outputDir/libjs1.so
     fi
 
-    g++ $includeString $libsString *.cpp -o $outputObj $gccArch -lv8 -O2 -fPIC --shared --save-temps -std=c++0x || err
+    g++ $includeString $libsString *.cpp -o $outputObj $gccArch -O2 -fPIC --shared --save-temps -std=c++0x --stdlib=libc++ || err
 
     if [[ "$unixtype" == "mac" ]] ; then
         pushd $outputDir > /dev/null || err
